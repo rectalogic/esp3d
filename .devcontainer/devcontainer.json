@@ -1,0 +1,15 @@
+{
+    "name": "esp3d",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "remoteUser": "esp",
+    "runArgs": ["--privileged", "--group-add=dialout"],
+    "mounts": [
+        {
+            "source": "${localEnv:HOME}/.gitconfig",
+            "target": "/home/esp/.gitconfig",
+            "type": "bind"
+        }
+    ]
+}
