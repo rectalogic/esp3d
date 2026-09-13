@@ -10,7 +10,6 @@
 use esp_hal::clock::CpuClock;
 use esp_hal::timer::timg::TimerGroup;
 
-
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
 
@@ -19,7 +18,6 @@ use log::info;
 use esp_backtrace as _;
 
 extern crate alloc;
-
 
 // This creates a default app-descriptor required by the esp-idf bootloader.
 // For more information see: <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/app_image_format.html#application-description>
@@ -40,13 +38,13 @@ async fn main(spawner: Spawner) -> ! {
     let peripherals = esp_hal::init(config);
 
     // The following pins are used to bootstrap the chip. They are available
-                    // for use, but check the datasheet of the module for more information on them.
-                    // - GPIO0
-// - GPIO3
-// - GPIO45
-// - GPIO46
-// These GPIO pins are in use by some feature of the module and should not be used.
-                        let _ = peripherals.GPIO27;
+    // for use, but check the datasheet of the module for more information on them.
+    // - GPIO0
+    // - GPIO3
+    // - GPIO45
+    // - GPIO46
+    // These GPIO pins are in use by some feature of the module and should not be used.
+    let _ = peripherals.GPIO27;
     let _ = peripherals.GPIO28;
     let _ = peripherals.GPIO29;
     let _ = peripherals.GPIO30;
@@ -58,16 +56,13 @@ async fn main(spawner: Spawner) -> ! {
     let _ = peripherals.GPIO36;
     let _ = peripherals.GPIO37;
 
-
     esp_alloc::heap_allocator!(#[esp_hal::ram(reclaimed)] size: 73744);
+    esp_alloc::psram_allocator!(peripherals.PSRAM, esp_hal::psram);
 
     let timg0 = TimerGroup::new(peripherals.TIMG0);
-    let sw_interrupt =
-        esp_hal::interrupt::software::SoftwareInterruptControl::new(peripherals.SW_INTERRUPT);
-    esp_rtos::start(timg0.timer0, sw_interrupt.software_interrupt0);
+    esp_rtos::start(timg0.timer0, peripherals.FROM_CPU_INTR0);
 
     info!("Embassy initialized!");
-
 
     // TODO: Spawn some tasks
     let _ = spawner;
