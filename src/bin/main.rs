@@ -64,6 +64,16 @@ async fn main(spawner: Spawner) -> ! {
 
     info!("Embassy initialized!");
 
+    let display_peripherals = esp3d::display::Peripherals {
+        spi2: peripherals.SPI2,
+        dc: peripherals.GPIO46.into(),
+        mosi: peripherals.GPIO11.into(),
+        sclk: peripherals.GPIO12.into(),
+        cs: peripherals.GPIO10.into(),
+        bl: peripherals.GPIO45.into(),
+    };
+    let display = esp3d::display::Display::new(display_peripherals);
+
     // TODO: Spawn some tasks
     let _ = spawner;
 
