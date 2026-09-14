@@ -1,59 +1,39 @@
 #![deny(clippy::large_stack_frames)]
 
-use core::ops::{Deref, DerefMut};
+extern crate alloc;
 
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex};
+use alloc::boxed::Box;
+use alloc::vec;
+use core::convert::AsRef;
 use embassy_time::Delay;
-use embedded_graphics::{
-    draw_target::DrawTarget,
-    mono_font::{MonoTextStyle, ascii::FONT_6X10},
-    pixelcolor::Rgb565,
-    prelude::*,
-    text::{Baseline, Text},
-};
-use embedded_hal::{
-    delay::DelayNs,
-    digital::{ErrorType, OutputPin},
-};
+use embedded_graphics::pixelcolor::{Rgb565, RgbColor};
+use embedded_graphics_framebuf::{FrameBuf, backends::FrameBufferBackend};
+use embedded_hal::digital::{ErrorType, OutputPin};
 use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 use esp_hal::{
-    Blocking,
+    Async,
+    dma::AhbGdmaChannel,
+    dma_rx_buffer, dma_tx_buffer,
     gpio::{AnyPin, Level, Output, OutputConfig},
     peripherals::SPI2,
     spi::{
         Mode as SpiMode,
-        master::{Config as SpiConfig, Spi},
+        master::{Config as SpiConfig, Spi, SpiDma},
     },
     time::Rate,
 };
-use mipidsi::{
-    Builder, NoResetPin,
-    interface::SpiInterface,
-    models::{ILI9341Rgb565, Model},
-    options::{ColorInversion, ColorOrder, Orientation, Rotation},
+
+use sky_ili9341::{
+    AsyncBuilder, AsyncDisplay, AsyncSpiInterface, ColorInversion, ColorOrder, Orientation,
+    options::{FRAMEBUFFER_HEIGHT, FRAMEBUFFER_WIDTH},
 };
-use static_cell::StaticCell;
 
-type DisplayTypeRst<RST> = mipidsi::Display<
-    SpiInterface<'static, ExclusiveDevice<Spi<'static, Blocking>, NoCs, NoDelay>, Output<'static>>,
-    ILI9341Rgb565,
-    RST,
->;
-type DisplayType = DisplayTypeRst<NoResetPin>;
-
-pub type DisplayAsyncMutex = mutex::Mutex<CriticalSectionRawMutex, Display>;
-
-pub type DisplayError = <DisplayType as DrawTarget>::Error;
-
-pub const DISPLAY_WIDTH: u32 = ILI9341Rgb565::FRAMEBUFFER_SIZE.0 as u32;
-pub const DISPLAY_HEIGHT: u32 = ILI9341Rgb565::FRAMEBUFFER_SIZE.1 as u32;
-pub const CENTER: Point = Point::new(
-    (ILI9341Rgb565::FRAMEBUFFER_SIZE.1 / 2) as i32,
-    (ILI9341Rgb565::FRAMEBUFFER_SIZE.0 / 2) as i32,
-);
+pub type Display<'a> =
+    AsyncDisplay<AsyncSpiInterface<ExclusiveDevice<SpiDma<'a, Async>, NoPin, NoDelay>, Output<'a>>>;
 
 pub struct Peripherals {
     pub spi2: SPI2<'static>,
+    pub dma: AhbGdmaChannel<'static>,
     pub dc: AnyPin<'static>,
     // miso GPIO11 not needed
     pub mosi: AnyPin<'static>,
@@ -62,86 +42,91 @@ pub struct Peripherals {
     pub bl: AnyPin<'static>,
 }
 
-pub struct Display {
-    display: DisplayType,
+#[expect(clippy::large_stack_frames)]
+pub async fn new_display<'a>(peripherals: Peripherals) -> Display<'a> {
+    let dma_rx_buf = dma_rx_buffer!(4).unwrap();
+    let dma_tx_buf = dma_tx_buffer!(32000).unwrap();
+
+    let spi_bus = Spi::new(
+        peripherals.spi2,
+        SpiConfig::default()
+            .with_frequency(Rate::from_mhz(40))
+            .with_mode(SpiMode::_0),
+    )
+    .expect("display SPI")
+    .with_sck(peripherals.sclk)
+    .with_mosi(peripherals.mosi)
+    .with_cs(peripherals.cs)
+    .with_dma(peripherals.dma)
+    .with_buffers(dma_rx_buf, dma_tx_buf)
+    .into_async();
+
+    let spi_device = ExclusiveDevice::new_no_delay(spi_bus, NoPin).expect("infallible");
+
+    let dc = Output::new(peripherals.dc, Level::Low, OutputConfig::default());
+
+    let di = AsyncSpiInterface::new(spi_device, dc);
+    let mut delay = Delay;
+    let mut reset_pin = NoPin;
+    let mut display = AsyncBuilder::new(di)
+        .invert_colors(ColorInversion::Inverted)
+        // .color_order(ColorOrder::Bgr)
+        .orientation(Orientation::Landscape)
+        .init(&mut reset_pin, &mut delay)
+        .await
+        .expect("display builder init");
+
+    let _backlight = Output::new(peripherals.bl, Level::High, OutputConfig::default());
+    display.clear_screen(0x0000).await.expect("display clear");
+
+    display
 }
 
-impl Display {
-    #[expect(clippy::large_stack_frames)]
-    pub fn new(peripherals: Peripherals) -> &'static DisplayAsyncMutex {
-        let spi = Spi::new(
-            peripherals.spi2,
-            SpiConfig::default()
-                .with_frequency(Rate::from_mhz(40))
-                .with_mode(SpiMode::_0),
-        )
-        .expect("display SPI")
-        .with_sck(peripherals.sclk)
-        .with_mosi(peripherals.mosi)
-        .with_cs(peripherals.cs);
+const FRAMEBUFFER_SIZE: usize = FRAMEBUFFER_WIDTH as usize * FRAMEBUFFER_HEIGHT as usize;
 
-        let dc = Output::new(peripherals.dc, Level::Low, OutputConfig::default());
+pub struct OwnedBuffer(Box<[Rgb565]>);
 
-        static STATIC_CELL: StaticCell<[u8; 512]> = StaticCell::new();
-        let display_buffer = STATIC_CELL.init([0_u8; 512]);
+impl FrameBufferBackend for OwnedBuffer {
+    type Color = Rgb565;
 
-        let spi_dev = ExclusiveDevice::new_no_delay(spi, NoCs).expect("infallible");
-        let interface = SpiInterface::new(spi_dev, dc, display_buffer);
-
-        let mut display = Builder::new(ILI9341Rgb565, interface)
-            .invert_colors(ColorInversion::Inverted)
-            .display_size(
-                ILI9341Rgb565::FRAMEBUFFER_SIZE.0,
-                ILI9341Rgb565::FRAMEBUFFER_SIZE.1,
-            )
-            .color_order(ColorOrder::Bgr)
-            .orientation(
-                Orientation::new()
-                    .rotate(Rotation::Deg270)
-                    .flip_horizontal(),
-            )
-            .init(&mut Delay)
-            .expect("display builder init");
-
-        let _backlight = Output::new(peripherals.bl, Level::High, OutputConfig::default());
-        display.clear(Rgb565::BLACK).expect("display clear");
-
-        static DISPLAY: StaticCell<DisplayAsyncMutex> = StaticCell::new();
-        DISPLAY.init(mutex::Mutex::new(Self { display }))
+    fn set(&mut self, index: usize, color: Rgb565) {
+        self.0[index] = color;
     }
 
-    pub fn message(&mut self, message: &str) -> ! {
-        log::error!("{message}");
-        self.display.clear(Rgb565::BLACK).unwrap();
-        let style = MonoTextStyle::new(&FONT_6X10, Rgb565::WHITE);
-        Text::with_baseline(message, Point::default(), style, Baseline::Top)
-            .draw(&mut self.display)
-            .unwrap();
+    fn get(&self, index: usize) -> Rgb565 {
+        self.0[index]
+    }
 
-        let mut delay = Delay;
-        loop {
-            delay.delay_ms(5000);
-        }
+    fn nr_elements(&self) -> usize {
+        self.0.len()
     }
 }
 
-impl Deref for Display {
-    type Target = DisplayType;
+impl AsRef<[u8]> for OwnedBuffer {
+    fn as_ref(&self) -> &[u8] {
+        let pixels = self.0.as_ref();
+        let ptr = pixels.as_ptr() as *const u8;
+        let len = pixels.len() * core::mem::size_of::<Rgb565>();
 
-    fn deref(&self) -> &Self::Target {
-        &self.display
+        unsafe { core::slice::from_raw_parts(ptr, len) }
     }
 }
 
-impl DerefMut for Display {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.display
-    }
+pub type FrameBuffer = FrameBuf<Rgb565, OwnedBuffer>;
+
+pub fn new_framebuffer() -> FrameBuffer {
+    let pixels = vec![Rgb565::BLACK; FRAMEBUFFER_SIZE].into_boxed_slice();
+
+    FrameBuffer::new(
+        OwnedBuffer(pixels),
+        FRAMEBUFFER_HEIGHT as usize,
+        FRAMEBUFFER_WIDTH as usize,
+    )
 }
 
-pub struct NoCs;
+pub struct NoPin;
 
-impl OutputPin for NoCs {
+impl OutputPin for NoPin {
     fn set_low(&mut self) -> Result<(), Self::Error> {
         Ok(())
     }
@@ -151,6 +136,6 @@ impl OutputPin for NoCs {
     }
 }
 
-impl ErrorType for NoCs {
+impl ErrorType for NoPin {
     type Error = core::convert::Infallible;
 }

@@ -66,13 +66,45 @@ async fn main(spawner: Spawner) -> ! {
 
     let display_peripherals = esp3d::display::Peripherals {
         spi2: peripherals.SPI2,
+        dma: peripherals.DMA_CH0.into(),
         dc: peripherals.GPIO46.into(),
         mosi: peripherals.GPIO11.into(),
         sclk: peripherals.GPIO12.into(),
         cs: peripherals.GPIO10.into(),
         bl: peripherals.GPIO45.into(),
     };
-    let display = esp3d::display::Display::new(display_peripherals);
+    let mut display = esp3d::display::new_display(display_peripherals).await;
+
+    use embedded_graphics::{
+        Drawable,
+        geometry::Point,
+        pixelcolor::{Rgb565, RgbColor},
+        prelude::{Primitive, Transform},
+        primitives::{PrimitiveStyleBuilder, Triangle},
+    };
+    let mut fb = esp3d::display::new_framebuffer();
+    Triangle::new(Point::new(50, 20), Point::new(100, 20), Point::new(75, 60))
+        .into_styled(
+            PrimitiveStyleBuilder::new()
+                .stroke_color(Rgb565::GREEN)
+                .stroke_width(3)
+                .fill_color(Rgb565::RED)
+                .build(),
+        )
+        .draw(&mut fb)
+        .unwrap();
+    Triangle::new(Point::new(50, 20), Point::new(100, 20), Point::new(75, 60))
+        .into_styled(
+            PrimitiveStyleBuilder::new()
+                .stroke_color(Rgb565::GREEN)
+                .stroke_width(3)
+                .fill_color(Rgb565::BLUE)
+                .build(),
+        )
+        .translate(Point::new(100, 50))
+        .draw(&mut fb)
+        .unwrap();
+    display.write_pixels_raw(fb.data.as_ref()).await.unwrap();
 
     // TODO: Spawn some tasks
     let _ = spawner;

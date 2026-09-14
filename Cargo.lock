@@ -527,6 +527,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "embedded-dma"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "994f7e5b5cb23521c22304927195f236813053eb9c065dd2226a32ba64695446"
+dependencies = [
+ "stable_deref_trait",
+]
+
+[[package]]
 name = "embedded-graphics"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -547,6 +556,16 @@ checksum = "95743bef3ff70fcba3930246c4e6872882bbea0dcc6da2ca860112e0cd4bd09f"
 dependencies = [
  "az",
  "byteorder",
+]
+
+[[package]]
+name = "embedded-graphics-framebuf"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22354420f68727fa24d1e2741dae1e9a041065e80fb63b35a8d19c647a85be76"
+dependencies = [
+ "embedded-dma",
+ "embedded-graphics",
 ]
 
 [[package]]
@@ -582,6 +601,7 @@ checksum = "513e0b3a8fb7d3013a8ae17a834283f170deaf7d0eeab0a7c1a36ad4dd356d22"
 dependencies = [
  "critical-section",
  "embedded-hal 1.0.0",
+ "embedded-hal-async",
 ]
 
 [[package]]
@@ -1014,6 +1034,7 @@ dependencies = [
  "embassy-sync 0.8.0",
  "embassy-time",
  "embedded-graphics",
+ "embedded-graphics-framebuf",
  "embedded-hal 1.0.0",
  "embedded-hal-bus",
  "esp-alloc",
@@ -1023,7 +1044,7 @@ dependencies = [
  "esp-println",
  "esp-rtos",
  "log",
- "mipidsi",
+ "sky-ili9341",
  "static_cell",
 ]
 
@@ -1311,17 +1332,6 @@ name = "micromath"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3c8dda44ff03a2f238717214da50f65d5a53b45cd213a7370424ffdb6fae815"
-
-[[package]]
-name = "mipidsi"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "790ebd28bd67addbccf41b1c0c188c26bb9f5bdcd91d4d6da9bd558e20d97a1d"
-dependencies = [
- "embedded-graphics-core",
- "embedded-hal 1.0.0",
- "heapless 0.8.0",
-]
 
 [[package]]
 name = "nb"
@@ -1635,6 +1645,17 @@ name = "shlex"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
+
+[[package]]
+name = "sky-ili9341"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cbe72826512d65aa10a8d1657fa7d5fc9403dce73e293817cb6fa8ab74e5e6a1"
+dependencies = [
+ "embedded-graphics-core",
+ "embedded-hal 1.0.0",
+ "embedded-hal-async",
+]
 
 [[package]]
 name = "smallvec"
