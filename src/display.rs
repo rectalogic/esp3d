@@ -6,7 +6,10 @@ use alloc::boxed::Box;
 use alloc::vec;
 use core::convert::AsRef;
 use embassy_time::Delay;
-use embedded_graphics::pixelcolor::{Rgb565, RgbColor};
+use embedded_graphics::{
+    pixelcolor::{Rgb565, RgbColor, raw::RawU16},
+    prelude::IntoStorage,
+};
 use embedded_graphics_framebuf::{FrameBuf, backends::FrameBufferBackend};
 use embedded_hal::digital::{ErrorType, OutputPin};
 use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
@@ -70,7 +73,7 @@ pub async fn new_display<'a>(peripherals: Peripherals) -> Display<'a> {
     let mut reset_pin = NoPin;
     let mut display = AsyncBuilder::new(di)
         .invert_colors(ColorInversion::Inverted)
-        // .color_order(ColorOrder::Bgr)
+        .color_order(ColorOrder::Bgr)
         .orientation(Orientation::Landscape)
         .init(&mut reset_pin, &mut delay)
         .await
@@ -90,11 +93,11 @@ impl FrameBufferBackend for OwnedBuffer {
     type Color = Rgb565;
 
     fn set(&mut self, index: usize, color: Rgb565) {
-        self.0[index] = color;
+        self.0[index] = Rgb565::from(RawU16::from(color.into_storage().swap_bytes()));
     }
 
     fn get(&self, index: usize) -> Rgb565 {
-        self.0[index]
+        Rgb565::from(RawU16::from(self.0[index].into_storage().swap_bytes()))
     }
 
     fn nr_elements(&self) -> usize {
@@ -106,8 +109,7 @@ impl AsRef<[u8]> for OwnedBuffer {
     fn as_ref(&self) -> &[u8] {
         let pixels = self.0.as_ref();
         let ptr = pixels.as_ptr() as *const u8;
-        let len = pixels.len() * core::mem::size_of::<Rgb565>();
-
+        let len = size_of_val(pixels);
         unsafe { core::slice::from_raw_parts(ptr, len) }
     }
 }
