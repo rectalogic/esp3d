@@ -33,6 +33,10 @@ use sky_ili9341::{
     options::{FRAMEBUFFER_HEIGHT, FRAMEBUFFER_WIDTH},
 };
 
+// Rotated landscape
+pub const DISPLAY_WIDTH: u16 = FRAMEBUFFER_HEIGHT;
+pub const DISPLAY_HEIGHT: u16 = FRAMEBUFFER_WIDTH;
+
 type Display<'a> =
     AsyncDisplay<AsyncSpiInterface<ExclusiveDevice<SpiDma<'a, Async>, NoPin, NoDelay>, Output<'a>>>;
 
@@ -50,9 +54,9 @@ pub struct Peripherals {
     pub bl: AnyPin<'static>,
 }
 
-pub async fn initialize(spawner: &Spawner, peripherals: Peripherals) -> FrameBuffer {
+pub fn initialize(spawner: &Spawner, peripherals: Peripherals) -> FrameBuffer {
     spawner.spawn(render_task(peripherals).expect("spawn render_task"));
-    RECYCLE_CHANNEL.receive().await
+    new_framebuffer()
 }
 
 #[embassy_executor::task]

@@ -72,8 +72,8 @@ async fn main(spawner: Spawner) -> ! {
         cs: peripherals.GPIO10.into(),
         bl: peripherals.GPIO45.into(),
     };
-    let framebuffer = esp3d::display::initialize(&spawner, display_peripherals).await;
-    esp3d::render::render(framebuffer).await
+    let framebuffer = esp3d::display::initialize(&spawner, display_peripherals);
+    esp3d::demos::render(framebuffer).await
 
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.1.0/examples
 }

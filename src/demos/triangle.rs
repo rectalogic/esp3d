@@ -9,7 +9,7 @@ use embedded_graphics::{
 
 use crate::display::{FrameBuffer, render_buffer};
 
-pub async fn render(mut framebuffer: FrameBuffer) -> ! {
+pub async fn _render(mut framebuffer: FrameBuffer) -> ! {
     let mut triangle = Triangle::new(Point::new(0, 0), Point::new(50, 0), Point::new(25, 50))
         .into_styled(
             PrimitiveStyleBuilder::new()
