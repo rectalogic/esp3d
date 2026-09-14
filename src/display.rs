@@ -5,6 +5,8 @@ extern crate alloc;
 use alloc::boxed::Box;
 use alloc::vec;
 use core::convert::AsRef;
+use embassy_executor::Spawner;
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
 use embassy_time::Delay;
 use embedded_graphics::{
     pixelcolor::{Rgb565, RgbColor, raw::RawU16},
@@ -31,8 +33,11 @@ use sky_ili9341::{
     options::{FRAMEBUFFER_HEIGHT, FRAMEBUFFER_WIDTH},
 };
 
-pub type Display<'a> =
+type Display<'a> =
     AsyncDisplay<AsyncSpiInterface<ExclusiveDevice<SpiDma<'a, Async>, NoPin, NoDelay>, Output<'a>>>;
+
+static RENDER_CHANNEL: Channel<CriticalSectionRawMutex, FrameBuffer, 1> = Channel::new();
+static RECYCLE_CHANNEL: Channel<CriticalSectionRawMutex, FrameBuffer, 1> = Channel::new();
 
 pub struct Peripherals {
     pub spi2: SPI2<'static>,
@@ -45,8 +50,31 @@ pub struct Peripherals {
     pub bl: AnyPin<'static>,
 }
 
-#[expect(clippy::large_stack_frames)]
-pub async fn new_display<'a>(peripherals: Peripherals) -> Display<'a> {
+pub async fn initialize(spawner: &Spawner, peripherals: Peripherals) -> FrameBuffer {
+    spawner.spawn(render_task(peripherals).expect("spawn render_task"));
+    RECYCLE_CHANNEL.receive().await
+}
+
+#[embassy_executor::task]
+async fn render_task(peripherals: Peripherals) {
+    let mut display = new_display(peripherals).await;
+    RECYCLE_CHANNEL.send(new_framebuffer()).await;
+    loop {
+        let framebuffer = RENDER_CHANNEL.receive().await;
+        display
+            .write_pixels_raw(framebuffer.data.as_ref())
+            .await
+            .expect("write_pixels_raw");
+        RECYCLE_CHANNEL.send(framebuffer).await;
+    }
+}
+
+pub async fn render_buffer(framebuffer: FrameBuffer) -> FrameBuffer {
+    RENDER_CHANNEL.send(framebuffer).await;
+    RECYCLE_CHANNEL.receive().await
+}
+
+async fn new_display<'a>(peripherals: Peripherals) -> Display<'a> {
     let dma_rx_buf = dma_rx_buffer!(4).unwrap();
     let dma_tx_buf = dma_tx_buffer!(32000).unwrap();
 
@@ -116,7 +144,7 @@ impl AsRef<[u8]> for OwnedBuffer {
 
 pub type FrameBuffer = FrameBuf<Rgb565, OwnedBuffer>;
 
-pub fn new_framebuffer() -> FrameBuffer {
+fn new_framebuffer() -> FrameBuffer {
     let pixels = vec![Rgb565::BLACK; FRAMEBUFFER_SIZE].into_boxed_slice();
 
     FrameBuffer::new(
@@ -126,7 +154,7 @@ pub fn new_framebuffer() -> FrameBuffer {
     )
 }
 
-pub struct NoPin;
+struct NoPin;
 
 impl OutputPin for NoPin {
     fn set_low(&mut self) -> Result<(), Self::Error> {

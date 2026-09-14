@@ -11,7 +11,6 @@ use esp_hal::clock::CpuClock;
 use esp_hal::timer::timg::TimerGroup;
 
 use embassy_executor::Spawner;
-use embassy_time::{Duration, Timer};
 
 use log::info;
 
@@ -73,46 +72,8 @@ async fn main(spawner: Spawner) -> ! {
         cs: peripherals.GPIO10.into(),
         bl: peripherals.GPIO45.into(),
     };
-    let mut display = esp3d::display::new_display(display_peripherals).await;
-
-    use embedded_graphics::{
-        Drawable,
-        geometry::Point,
-        pixelcolor::{Rgb565, RgbColor},
-        prelude::{Primitive, Transform},
-        primitives::{PrimitiveStyleBuilder, Triangle},
-    };
-    let mut fb = esp3d::display::new_framebuffer();
-    Triangle::new(Point::new(50, 20), Point::new(100, 20), Point::new(75, 60))
-        .into_styled(
-            PrimitiveStyleBuilder::new()
-                .stroke_color(Rgb565::GREEN)
-                .stroke_width(3)
-                .fill_color(Rgb565::RED)
-                .build(),
-        )
-        .draw(&mut fb)
-        .unwrap();
-    Triangle::new(Point::new(50, 20), Point::new(100, 20), Point::new(75, 60))
-        .into_styled(
-            PrimitiveStyleBuilder::new()
-                .stroke_color(Rgb565::GREEN)
-                .stroke_width(3)
-                .fill_color(Rgb565::BLUE)
-                .build(),
-        )
-        .translate(Point::new(100, 50))
-        .draw(&mut fb)
-        .unwrap();
-    display.write_pixels_raw(fb.data.as_ref()).await.unwrap();
-
-    // TODO: Spawn some tasks
-    let _ = spawner;
-
-    loop {
-        info!("Hello world!");
-        Timer::after(Duration::from_secs(1)).await;
-    }
+    let framebuffer = esp3d::display::initialize(&spawner, display_peripherals).await;
+    esp3d::render::render(framebuffer).await
 
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.1.0/examples
 }
