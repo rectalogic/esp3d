@@ -3,16 +3,6 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 use embassy_time::{Duration, Instant, Timer};
-#[cfg(feature = "cube-perf")]
-use embedded_3dgfx::perfcounter::PerformanceCounter;
-#[cfg(feature = "cube-perf")]
-use embedded_graphics::{
-    Drawable,
-    geometry::Point,
-    mono_font::{MonoTextStyle, ascii::FONT_6X10},
-    text::Text,
-};
-
 use embedded_3dgfx::{
     Z_MAX_VALUE,
     command_buffer::CommandBuffer,
@@ -91,19 +81,8 @@ pub async fn _render(mut framebuffer: FrameBuffer) -> ! {
     cube.set_render_mode(RenderMode::Lines);
     cube.set_color(Rgb565::CSS_CYAN);
 
-    #[cfg(feature = "cube-perf")]
-    let (mut perf, text_style) = {
-        let mut perf = PerformanceCounter::new();
-        perf.only_fps(true);
-        let text_style = MonoTextStyle::new(&FONT_6X10, Rgb565::CSS_WHITE);
-        (perf, text_style)
-    };
-
     let mut rotation = 0.0f32;
-
     loop {
-        #[cfg(feature = "cube-perf")]
-        perf.start_of_frame();
         let render_time = Instant::now();
         rotation += 0.1;
 
@@ -125,14 +104,6 @@ pub async fn _render(mut framebuffer: FrameBuffer) -> ! {
         engine
             .execute(&mut framebuffer, &mut frame, &commands, None)
             .unwrap();
-
-        #[cfg(feature = "cube-perf")]
-        {
-            perf.print();
-            Text::new(perf.get_text(), Point::new(10, 20), text_style)
-                .draw(&mut framebuffer)
-                .unwrap();
-        }
 
         framebuffer = present_buffer(framebuffer).await;
         let render_elapsed = render_time.elapsed().as_millis();
