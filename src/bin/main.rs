@@ -82,11 +82,14 @@ async fn main(_spawner: Spawner) -> ! {
             static EXECUTOR: StaticCell<Executor> = StaticCell::new();
             let executor = EXECUTOR.init(Executor::new());
             executor.run(|spawner| {
-                spawner.spawn(esp3d::display::render_task(display_peripherals).expect("spawn render_task"));
+                spawner.spawn(
+                    esp3d::swapchain::swapchain_task(display_peripherals)
+                        .expect("spawn swapchain_task"),
+                );
             });
         },
     );
-    esp3d::demos::render(esp3d::display::new_framebuffer()).await
+    esp3d::demos::render(esp3d::swapchain::new_framebuffer()).await
 
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.1.0/examples
 }

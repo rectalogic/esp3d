@@ -7,7 +7,7 @@ use embedded_graphics::{
     primitives::{PrimitiveStyleBuilder, Triangle},
 };
 
-use crate::display::{FrameBuffer, render_buffer};
+use crate::swapchain::{FrameBuffer, present_buffer};
 
 pub async fn _render(mut framebuffer: FrameBuffer) -> ! {
     let mut triangle = Triangle::new(Point::new(0, 0), Point::new(50, 0), Point::new(25, 50))
@@ -27,7 +27,7 @@ pub async fn _render(mut framebuffer: FrameBuffer) -> ! {
             step = -step;
         };
         triangle.draw(&mut framebuffer);
-        framebuffer = render_buffer(framebuffer).await;
+        framebuffer = present_buffer(framebuffer).await;
         framebuffer.reset();
         Timer::after(Duration::from_millis(30)).await;
     }

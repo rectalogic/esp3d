@@ -29,7 +29,10 @@ use embedded_graphics::{
 
 use nalgebra::Point3;
 
-use crate::display::{DISPLAY_HEIGHT, DISPLAY_WIDTH, FrameBuffer, render_buffer};
+use crate::{
+    display::{DISPLAY_HEIGHT, DISPLAY_WIDTH},
+    swapchain::{FrameBuffer, present_buffer},
+};
 
 fn make_cube() -> (Vec<[f32; 3]>, Vec<[usize; 3]>) {
     let vertices = vec![
@@ -96,17 +99,16 @@ pub async fn _render(mut framebuffer: FrameBuffer) -> ! {
         (perf, text_style)
     };
 
-    let initial_time = Instant::now();
+    let mut rotation = 0.0f32;
 
     loop {
         #[cfg(feature = "cube-perf")]
         perf.start_of_frame();
         let render_time = Instant::now();
-        // Calculate rotation based on time
-        let elapsed = initial_time.elapsed().as_secs() as f32;
+        rotation += 0.1;
 
         // Update cube rotation
-        cube.set_attitude(elapsed * 0.5, elapsed, elapsed * 0.3);
+        cube.set_attitude(rotation * 0.5, rotation, rotation * 0.3);
 
         // Clear display
         framebuffer.clear(Rgb565::BLACK).unwrap();
@@ -132,7 +134,7 @@ pub async fn _render(mut framebuffer: FrameBuffer) -> ! {
                 .unwrap();
         }
 
-        framebuffer = render_buffer(framebuffer).await;
+        framebuffer = present_buffer(framebuffer).await;
         let render_elapsed = render_time.elapsed().as_millis();
         if render_elapsed < 33 {
             Timer::after(Duration::from_millis(33 - render_elapsed)).await;
