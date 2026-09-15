@@ -7,9 +7,9 @@ use embedded_graphics::{
     primitives::{PrimitiveStyleBuilder, Triangle},
 };
 
-use crate::swapchain::{FrameBuffer, present_buffer};
+use crate::swapchain::SwapChain;
 
-pub async fn _render(mut framebuffer: FrameBuffer) -> ! {
+pub async fn _render(mut swapchain: SwapChain) -> ! {
     let mut triangle = Triangle::new(Point::new(0, 0), Point::new(50, 0), Point::new(25, 50))
         .into_styled(
             PrimitiveStyleBuilder::new()
@@ -26,9 +26,9 @@ pub async fn _render(mut framebuffer: FrameBuffer) -> ! {
         if !(0..240).contains(&amount) {
             step = -step;
         };
-        triangle.draw(&mut framebuffer);
-        framebuffer = present_buffer(framebuffer).await;
-        framebuffer.reset();
+        triangle.draw(swapchain.back_buffer());
+        swapchain.present().await;
+        swapchain.back_buffer().reset();
         Timer::after(Duration::from_millis(30)).await;
     }
 }

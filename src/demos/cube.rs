@@ -21,7 +21,7 @@ use nalgebra::Point3;
 
 use crate::{
     display::{DISPLAY_HEIGHT, DISPLAY_WIDTH},
-    swapchain::{FrameBuffer, present_buffer},
+    swapchain::SwapChain,
 };
 
 fn make_cube() -> (Vec<[f32; 3]>, Vec<[usize; 3]>) {
@@ -54,7 +54,7 @@ fn make_cube() -> (Vec<[f32; 3]>, Vec<[usize; 3]>) {
     (vertices, faces)
 }
 
-pub async fn _render(mut framebuffer: FrameBuffer) -> ! {
+pub async fn _render(mut swapchain: SwapChain) -> ! {
     let mut zbuffer = vec![Z_MAX_VALUE; DISPLAY_WIDTH as usize * DISPLAY_HEIGHT as usize];
     let mut commands = CommandBuffer::<100>::new();
 
@@ -90,7 +90,7 @@ pub async fn _render(mut framebuffer: FrameBuffer) -> ! {
         cube.set_attitude(rotation * 0.5, rotation, rotation * 0.3);
 
         // Clear display
-        framebuffer.clear(Rgb565::BLACK).unwrap();
+        swapchain.back_buffer().clear(Rgb565::BLACK).unwrap();
         zbuffer.fill(Z_MAX_VALUE);
 
         engine
@@ -102,10 +102,10 @@ pub async fn _render(mut framebuffer: FrameBuffer) -> ! {
             height: DISPLAY_HEIGHT as usize,
         };
         engine
-            .execute(&mut framebuffer, &mut frame, &commands, None)
+            .execute(swapchain.back_buffer(), &mut frame, &commands, None)
             .unwrap();
 
-        framebuffer = present_buffer(framebuffer).await;
+        swapchain.present().await;
         let render_elapsed = render_time.elapsed().as_millis();
         if render_elapsed < 33 {
             Timer::after(Duration::from_millis(33 - render_elapsed)).await;

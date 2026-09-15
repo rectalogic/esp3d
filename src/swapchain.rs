@@ -19,6 +19,34 @@ use crate::display;
 static FRONTBUFFER_CHANNEL: Channel<CriticalSectionRawMutex, FrameBuffer, 1> = Channel::new();
 static BACKBUFFER_CHANNEL: Channel<CriticalSectionRawMutex, FrameBuffer, 1> = Channel::new();
 
+pub struct SwapChain {
+    back_buffer: Option<FrameBuffer>,
+}
+
+impl SwapChain {
+    pub fn new() -> Self {
+        Self {
+            back_buffer: Some(new_framebuffer()),
+        }
+    }
+
+    /// Returns the back buffer so callers can draw into it.
+    ///
+    /// The concrete `FrameBuf`/`OwnedBuffer` types stay private; callers only see the
+    /// trait bounds they need, and can hand the result to any function generic over
+    /// `DrawTarget<Color = Rgb565> + OriginDimensions` (e.g. `K3dengine::execute`).
+    pub fn back_buffer(&mut self) -> &mut FrameBuffer {
+        self.back_buffer.as_mut().unwrap()
+    }
+
+    pub async fn present(&mut self) {
+        FRONTBUFFER_CHANNEL
+            .send(self.back_buffer.take().unwrap())
+            .await;
+        self.back_buffer = Some(BACKBUFFER_CHANNEL.receive().await);
+    }
+}
+
 #[embassy_executor::task]
 pub async fn swapchain_task(peripherals: display::Peripherals) {
     let mut display = display::new_display(peripherals).await;
@@ -31,11 +59,6 @@ pub async fn swapchain_task(peripherals: display::Peripherals) {
             .expect("write_pixels_raw");
         BACKBUFFER_CHANNEL.send(framebuffer).await;
     }
-}
-
-pub async fn present_buffer(framebuffer: FrameBuffer) -> FrameBuffer {
-    FRONTBUFFER_CHANNEL.send(framebuffer).await;
-    BACKBUFFER_CHANNEL.receive().await
 }
 
 const FRAMEBUFFER_SIZE: usize = FRAMEBUFFER_WIDTH as usize * FRAMEBUFFER_HEIGHT as usize;
@@ -69,7 +92,7 @@ impl AsRef<[u8]> for OwnedBuffer {
 
 pub type FrameBuffer = FrameBuf<Rgb565, OwnedBuffer>;
 
-pub fn new_framebuffer() -> FrameBuffer {
+fn new_framebuffer() -> FrameBuffer {
     let pixels = vec![Rgb565::BLACK; FRAMEBUFFER_SIZE].into_boxed_slice();
 
     FrameBuffer::new(

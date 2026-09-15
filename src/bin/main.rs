@@ -89,7 +89,8 @@ async fn main(_spawner: Spawner) -> ! {
             });
         },
     );
-    esp3d::demos::render(esp3d::swapchain::new_framebuffer()).await
+    let swapchain = esp3d::swapchain::SwapChain::new();
+    esp3d::demos::render(swapchain).await
 
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.1.0/examples
 }
