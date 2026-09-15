@@ -72,6 +72,7 @@ pub async fn render_buffer(framebuffer: FrameBuffer) -> FrameBuffer {
     RECYCLE_CHANNEL.receive().await
 }
 
+#[expect(clippy::large_stack_frames)]
 async fn new_display<'a>(peripherals: Peripherals) -> Display<'a> {
     let dma_rx_buf = dma_rx_buffer!(4).unwrap();
     let dma_tx_buf = dma_tx_buffer!(32000).unwrap();
