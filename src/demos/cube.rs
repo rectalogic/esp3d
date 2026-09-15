@@ -78,11 +78,12 @@ pub async fn _render(mut framebuffer: FrameBuffer) -> ! {
     cube.set_render_mode(RenderMode::Lines);
     cube.set_color(Rgb565::CSS_CYAN);
 
-    let start_time = Instant::now();
+    let initial_time = Instant::now();
 
     loop {
+        let render_time = Instant::now();
         // Calculate rotation based on time
-        let elapsed = start_time.elapsed().as_secs() as f32;
+        let elapsed = initial_time.elapsed().as_secs() as f32;
 
         // Update cube rotation
         cube.set_attitude(elapsed * 0.5, elapsed, elapsed * 0.3);
@@ -104,6 +105,9 @@ pub async fn _render(mut framebuffer: FrameBuffer) -> ! {
             .unwrap();
 
         framebuffer = render_buffer(framebuffer).await;
-        Timer::after(Duration::from_millis(16)).await;
+        let render_elapsed = render_time.elapsed().as_millis();
+        if render_elapsed < 33 {
+            Timer::after(Duration::from_millis(33 - render_elapsed)).await;
+        }
     }
 }

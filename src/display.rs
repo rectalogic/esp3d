@@ -5,7 +5,6 @@ extern crate alloc;
 use alloc::boxed::Box;
 use alloc::vec;
 use core::convert::AsRef;
-use embassy_executor::Spawner;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
 use embassy_time::Delay;
 use embedded_graphics::{
@@ -54,13 +53,8 @@ pub struct Peripherals {
     pub bl: AnyPin<'static>,
 }
 
-pub fn initialize(spawner: &Spawner, peripherals: Peripherals) -> FrameBuffer {
-    spawner.spawn(render_task(peripherals).expect("spawn render_task"));
-    new_framebuffer()
-}
-
 #[embassy_executor::task]
-async fn render_task(peripherals: Peripherals) {
+pub async fn render_task(peripherals: Peripherals) {
     let mut display = new_display(peripherals).await;
     RECYCLE_CHANNEL.send(new_framebuffer()).await;
     loop {
@@ -148,7 +142,7 @@ impl AsRef<[u8]> for OwnedBuffer {
 
 pub type FrameBuffer = FrameBuf<Rgb565, OwnedBuffer>;
 
-fn new_framebuffer() -> FrameBuffer {
+pub fn new_framebuffer() -> FrameBuffer {
     let pixels = vec![Rgb565::BLACK; FRAMEBUFFER_SIZE].into_boxed_slice();
 
     FrameBuffer::new(

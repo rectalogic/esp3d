@@ -7,10 +7,10 @@
 )]
 #![deny(clippy::large_stack_frames)]
 
-use esp_hal::clock::CpuClock;
-use esp_hal::timer::timg::TimerGroup;
-
 use embassy_executor::Spawner;
+use esp_hal::{clock::CpuClock, system::Stack, timer::timg::TimerGroup};
+use esp_rtos::embassy::Executor;
+use static_cell::StaticCell;
 
 use log::info;
 
@@ -27,7 +27,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
     reason = "it's not unusual to allocate larger buffers etc. in main"
 )]
 #[esp_rtos::main]
-async fn main(spawner: Spawner) -> ! {
+async fn main(_spawner: Spawner) -> ! {
     // generator version: 1.3.0
     // generator parameters: --chip esp32s3 -o esp32s3-wroom-1-octal-psram -o unstable-hal -o alloc -o embassy -o log -o esp-backtrace -o zed
 
@@ -72,8 +72,21 @@ async fn main(spawner: Spawner) -> ! {
         cs: peripherals.GPIO10.into(),
         bl: peripherals.GPIO45.into(),
     };
-    let framebuffer = esp3d::display::initialize(&spawner, display_peripherals);
-    esp3d::demos::render(framebuffer).await
+    static APP_CORE_STACK: StaticCell<Stack<8192>> = StaticCell::new();
+    let app_core_stack = APP_CORE_STACK.init(Stack::new());
+    esp_rtos::start_second_core(
+        peripherals.CPU_CTRL,
+        peripherals.FROM_CPU_INTR1,
+        app_core_stack,
+        move || {
+            static EXECUTOR: StaticCell<Executor> = StaticCell::new();
+            let executor = EXECUTOR.init(Executor::new());
+            executor.run(|spawner| {
+                spawner.spawn(esp3d::display::render_task(display_peripherals).expect("spawn render_task"));
+            });
+        },
+    );
+    esp3d::demos::render(esp3d::display::new_framebuffer()).await
 
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.1.0/examples
 }
