@@ -11,6 +11,7 @@ path = "./src/bin/main.rs"
 [features]
 triangle = []
 cube = []
+cube-perf = ["cube", "embedded-3dgfx/perfcounter"]
 
 [dependencies]
 esp-hal = { version = "~1.2.0", features = ["esp32s3", "log-04", "unstable"] }
