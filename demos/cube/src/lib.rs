@@ -21,10 +21,7 @@ use embedded_graphics::{
 
 use nalgebra::Point3;
 
-use esp3d::{
-    display::{DISPLAY_HEIGHT, DISPLAY_WIDTH},
-    swapchain::SwapChain,
-};
+use esp3d::{DISPLAY_HEIGHT, DISPLAY_WIDTH, SwapChain};
 
 fn make_cube() -> (Vec<[f32; 3]>, Vec<[usize; 3]>) {
     let vertices = vec![

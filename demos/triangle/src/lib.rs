@@ -9,7 +9,7 @@ use embedded_graphics::{
     primitives::{PrimitiveStyleBuilder, Triangle},
 };
 
-use esp3d::swapchain::SwapChain;
+use esp3d::SwapChain;
 
 pub async fn render(mut swapchain: SwapChain) -> ! {
     let mut triangle = Triangle::new(Point::new(0, 0), Point::new(50, 0), Point::new(25, 50))
