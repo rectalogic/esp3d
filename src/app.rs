@@ -5,7 +5,6 @@
 )]
 #![deny(clippy::large_stack_frames)]
 
-use embassy_executor::Spawner;
 use esp_hal::{clock::CpuClock, system::Stack, timer::timg::TimerGroup};
 use esp_rtos::embassy::Executor;
 use static_cell::StaticCell;
@@ -13,6 +12,8 @@ use static_cell::StaticCell;
 use log::info;
 
 use esp_backtrace as _;
+
+use crate::swapchain::SwapChain;
 
 extern crate alloc;
 
@@ -25,7 +26,11 @@ esp_bootloader_esp_idf::esp_app_desc!();
     reason = "it's not unusual to allocate larger buffers etc. in main"
 )]
 #[inline]
-pub async fn app(_spawner: Spawner) -> ! {
+pub async fn app<RF, Fut, T>(render: RF) -> T
+where
+    RF: FnOnce(SwapChain) -> Fut,
+    Fut: Future<Output = T>,
+{
     // generator version: 1.3.0
     // generator parameters: --chip esp32s3 -o esp32s3-wroom-1-octal-psram -o unstable-hal -o alloc -o embassy -o log -o esp-backtrace -o zed
 
@@ -88,5 +93,5 @@ pub async fn app(_spawner: Spawner) -> ! {
         },
     );
     let swapchain = crate::swapchain::SwapChain::new();
-    crate::demos::render(swapchain).await
+    render(swapchain).await
 }

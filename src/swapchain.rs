@@ -24,6 +24,7 @@ pub struct SwapChain {
 }
 
 impl SwapChain {
+    #[expect(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             back_buffer: Some(new_framebuffer()),

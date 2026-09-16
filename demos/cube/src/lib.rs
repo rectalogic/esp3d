@@ -1,3 +1,5 @@
+#![no_std]
+
 extern crate alloc;
 
 use alloc::vec;
@@ -19,7 +21,7 @@ use embedded_graphics::{
 
 use nalgebra::Point3;
 
-use crate::{
+use esp3d::{
     display::{DISPLAY_HEIGHT, DISPLAY_WIDTH},
     swapchain::SwapChain,
 };
@@ -54,7 +56,7 @@ fn make_cube() -> (Vec<[f32; 3]>, Vec<[usize; 3]>) {
     (vertices, faces)
 }
 
-pub async fn _render(mut swapchain: SwapChain) -> ! {
+pub async fn render(mut swapchain: SwapChain) -> ! {
     let mut zbuffer = vec![Z_MAX_VALUE; DISPLAY_WIDTH as usize * DISPLAY_HEIGHT as usize];
     let mut commands = CommandBuffer::<100>::new();
 

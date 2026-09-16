@@ -188,6 +188,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "cube"
+version = "0.1.0"
+dependencies = [
+ "embassy-executor",
+ "embassy-time",
+ "embedded-3dgfx",
+ "embedded-graphics",
+ "esp-hal",
+ "esp-rtos",
+ "esp3d",
+ "nalgebra",
+]
+
+[[package]]
 name = "darling"
 version = "0.20.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1079,7 +1093,6 @@ dependencies = [
  "embassy-executor",
  "embassy-sync 0.8.0",
  "embassy-time",
- "embedded-3dgfx",
  "embedded-graphics",
  "embedded-graphics-framebuf 0.5.0",
  "embedded-hal 1.0.0",
@@ -1091,7 +1104,6 @@ dependencies = [
  "esp-println",
  "esp-rtos",
  "log",
- "nalgebra",
  "sky-ili9341",
  "static_cell",
 ]
@@ -2028,6 +2040,18 @@ dependencies = [
  "tracing",
  "tracing-core",
  "tracing-log",
+]
+
+[[package]]
+name = "triangle"
+version = "0.1.0"
+dependencies = [
+ "embassy-executor",
+ "embassy-time",
+ "embedded-graphics",
+ "esp-hal",
+ "esp-rtos",
+ "esp3d",
 ]
 
 [[package]]

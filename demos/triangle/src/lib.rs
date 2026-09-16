@@ -1,3 +1,5 @@
+#![no_std]
+
 use embassy_time::{Duration, Timer};
 use embedded_graphics::{
     Drawable,
@@ -7,9 +9,9 @@ use embedded_graphics::{
     primitives::{PrimitiveStyleBuilder, Triangle},
 };
 
-use crate::swapchain::SwapChain;
+use esp3d::swapchain::SwapChain;
 
-pub async fn _render(mut swapchain: SwapChain) -> ! {
+pub async fn render(mut swapchain: SwapChain) -> ! {
     let mut triangle = Triangle::new(Point::new(0, 0), Point::new(50, 0), Point::new(25, 50))
         .into_styled(
             PrimitiveStyleBuilder::new()
