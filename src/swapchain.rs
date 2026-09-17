@@ -25,18 +25,13 @@ pub struct SwapChain {
 }
 
 impl SwapChain {
-    #[expect(clippy::new_without_default)]
-    pub fn new() -> Self {
+    pub async fn new() -> Self {
+        BACKBUFFER_CHANNEL.send(new_framebuffer()).await;
         Self {
             back_buffer: Some(new_framebuffer()),
         }
     }
 
-    /// Returns the back buffer so callers can draw into it.
-    ///
-    /// The concrete `FrameBuf`/`OwnedBuffer` types stay private; callers only see the
-    /// trait bounds they need, and can hand the result to any function generic over
-    /// `DrawTarget<Color = Rgb565> + OriginDimensions` (e.g. `K3dengine::execute`).
     pub fn back_buffer(&mut self) -> &mut FrameBuffer {
         self.back_buffer.as_mut().unwrap()
     }
@@ -52,7 +47,6 @@ impl SwapChain {
 #[embassy_executor::task]
 pub async fn swapchain_task(peripherals: display::Peripherals) {
     let mut display = display::new_display(peripherals).await;
-    BACKBUFFER_CHANNEL.send(new_framebuffer()).await;
     loop {
         let framebuffer = FRONTBUFFER_CHANNEL.receive().await;
         display

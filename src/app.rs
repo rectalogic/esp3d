@@ -90,6 +90,6 @@ where
             });
         },
     );
-    let swapchain = crate::swapchain::SwapChain::new();
+    let swapchain = crate::swapchain::SwapChain::new().await;
     render(swapchain).await
 }
