@@ -1,5 +1,8 @@
 #![deny(clippy::large_stack_frames)]
 
+mod display;
+pub use display::{DISPLAY_HEIGHT, DISPLAY_WIDTH, Peripherals};
+
 extern crate alloc;
 
 use alloc::boxed::Box;
@@ -13,8 +16,6 @@ use embedded_graphics::{
 use embedded_graphics_framebuf::{FrameBuf, backends::FrameBufferBackend};
 
 use sky_ili9341::options::{FRAMEBUFFER_HEIGHT, FRAMEBUFFER_WIDTH};
-
-use crate::display;
 
 static FRONTBUFFER_CHANNEL: Channel<CriticalSectionRawMutex, FrameBuffer, 1> = Channel::new();
 static BACKBUFFER_CHANNEL: Channel<CriticalSectionRawMutex, FrameBuffer, 1> = Channel::new();

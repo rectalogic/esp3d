@@ -13,8 +13,6 @@ use log::info;
 
 use esp_backtrace as _;
 
-use crate::swapchain::SwapChain;
-
 extern crate alloc;
 
 // This creates a default app-descriptor required by the esp-idf bootloader.
@@ -28,7 +26,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 #[inline]
 pub async fn app<RF, Fut, T>(render: RF) -> T
 where
-    RF: FnOnce(SwapChain) -> Fut,
+    RF: FnOnce(crate::swapchain::SwapChain) -> Fut,
     Fut: Future<Output = T>,
 {
     // generator version: 1.3.0
@@ -66,7 +64,7 @@ where
 
     info!("Embassy initialized!");
 
-    let display_peripherals = crate::display::Peripherals {
+    let display_peripherals = crate::swapchain::Peripherals {
         spi2: peripherals.SPI2,
         dma: peripherals.DMA_CH0.into(),
         dc: peripherals.GPIO46.into(),

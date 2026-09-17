@@ -1,7 +1,5 @@
 #![no_std]
 pub mod app;
-mod display;
 mod swapchain;
 
-pub use display::{DISPLAY_HEIGHT, DISPLAY_WIDTH};
-pub use swapchain::SwapChain;
+pub use swapchain::{DISPLAY_HEIGHT, DISPLAY_WIDTH, SwapChain};
