@@ -1,113 +1,17 @@
 #![no_std]
 
-extern crate alloc;
+mod game;
+mod mesh;
+mod render;
 
-use alloc::vec;
-use alloc::vec::Vec;
-use embassy_time::{Duration, Instant, Timer};
-use embedded_3dgfx::{
-    Z_MAX_VALUE,
-    command_buffer::CommandBuffer,
-    config::apply_default_caps,
-    engine::K3dengine,
-    mesh::{Geometry, K3dMesh, RenderMode},
-    renderer::FrameCtx,
-};
-use embedded_graphics::{
-    draw_target::DrawTarget,
-    pixelcolor::{Rgb565, RgbColor},
-    prelude::WebColors,
-};
+use bevy::{DefaultPlugins, app::App, platform::time::Instant as BevyInstant};
+use embassy_time::{Duration, Instant};
 
-use nalgebra::Point3;
-
-use esp3d::{DISPLAY_HEIGHT, DISPLAY_WIDTH, SwapChain};
-
-fn make_cube() -> (Vec<[f32; 3]>, Vec<[usize; 3]>) {
-    let vertices = vec![
-        [-1.0, -1.0, 1.0],
-        [1.0, -1.0, 1.0],
-        [1.0, 1.0, 1.0],
-        [-1.0, 1.0, 1.0],
-        [-1.0, -1.0, -1.0],
-        [1.0, -1.0, -1.0],
-        [1.0, 1.0, -1.0],
-        [-1.0, 1.0, -1.0],
-    ];
-
-    let faces = vec![
-        [0, 1, 2],
-        [0, 2, 3],
-        [5, 4, 7],
-        [5, 7, 6],
-        [3, 2, 6],
-        [3, 6, 7],
-        [4, 5, 1],
-        [4, 1, 0],
-        [1, 5, 6],
-        [1, 6, 2],
-        [4, 0, 3],
-        [4, 3, 7],
-    ];
-
-    (vertices, faces)
-}
-
-pub async fn render(mut swapchain: SwapChain) -> ! {
-    let mut zbuffer = vec![Z_MAX_VALUE; DISPLAY_WIDTH as usize * DISPLAY_HEIGHT as usize];
-    let mut commands = CommandBuffer::<100>::new();
-
-    // Create 3D engine
-    let mut engine = K3dengine::new(DISPLAY_WIDTH, DISPLAY_HEIGHT);
-    apply_default_caps(&mut engine);
-    engine.camera.set_position(Point3::new(0.0, 2.0, 6.0));
-    engine.camera.set_target(Point3::new(0.0, 0.0, 0.0));
-
-    // Create cube
-    let (vertices, faces) = make_cube();
-    let geometry = Geometry {
-        vertices: &vertices,
-        faces: &faces,
-        colors: &[],
-        lines: &[],
-        normals: &[],
-        vertex_normals: &[],
-        uvs: &[],
-        texture_id: None,
-    };
-
-    let mut cube = K3dMesh::new(geometry);
-    cube.set_render_mode(RenderMode::Lines);
-    cube.set_color(Rgb565::CSS_CYAN);
-
-    let mut rotation = 0.0f32;
-    loop {
-        let render_time = Instant::now();
-        rotation += 0.1;
-
-        // Update cube rotation
-        cube.set_attitude(rotation * 0.5, rotation, rotation * 0.3);
-
-        // Clear display
-        swapchain.back_buffer().clear(Rgb565::BLACK).unwrap();
-        zbuffer.fill(Z_MAX_VALUE);
-
-        engine
-            .record(core::iter::once(&cube), &mut commands, None)
-            .unwrap();
-        let mut frame = FrameCtx {
-            zbuffer: &mut zbuffer,
-            width: DISPLAY_WIDTH as usize,
-            height: DISPLAY_HEIGHT as usize,
-        };
-        engine
-            .execute(swapchain.back_buffer(), &mut frame, &commands, None)
-            .unwrap();
-
-        swapchain.present().await;
-        let render_elapsed = render_time.elapsed().as_millis();
-        if render_elapsed < 33 {
-            Timer::after(Duration::from_millis(33 - render_elapsed)).await;
-        }
+pub async fn render(swapchain: esp3d::SwapChain) -> ! {
+    unsafe {
+        BevyInstant::set_elapsed(|| Duration::from_ticks(Instant::now().as_ticks()).into());
     }
+    let mut app = App::new();
+    app.add_plugins((DefaultPlugins, render::RenderPlugin, game::GamePlugin));
+    render::run(app, swapchain, 30).await
 }
