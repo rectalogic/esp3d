@@ -799,7 +799,6 @@ dependencies = [
  "esp-rtos",
  "esp3d",
  "nalgebra",
- "static_cell",
 ]
 
 [[package]]

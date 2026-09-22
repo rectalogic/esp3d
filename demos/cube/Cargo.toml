@@ -10,7 +10,6 @@ esp-hal.workspace = true
 esp-rtos.workspace = true
 embassy-time.workspace = true
 embassy-executor.workspace = true
-static_cell.workspace = true
 embedded-3dgfx.workspace = true
 embedded-graphics.workspace = true
 nalgebra.workspace = true
