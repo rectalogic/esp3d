@@ -54,6 +54,7 @@ embedded-hal-bus = { version = "0.3.0", features = ["alloc", "async"] }
 sky-ili9341 = { version = "0.1.1", features = ["async", "embedded-hal-async"] }
 embedded-graphics.workspace = true
 embedded-graphics-framebuf.workspace = true
+ft6336u-driver = "1.0.0"
 
 # For fine tuning these settings, please refer to https://doc.rust-lang.org/cargo/reference/profiles.html
 [profile.dev]

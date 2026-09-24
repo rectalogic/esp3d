@@ -1767,6 +1767,7 @@ dependencies = [
  "esp-hal",
  "esp-println",
  "esp-rtos",
+ "ft6336u-driver",
  "log",
  "sky-ili9341",
  "static_cell",
@@ -1810,6 +1811,15 @@ name = "foldhash"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
+
+[[package]]
+name = "ft6336u-driver"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d90a231ee3113677a46ef2169c821ed5a27ed8bae066c1a35b8ca34bdd4e9e5e"
+dependencies = [
+ "embedded-hal 1.0.0",
+]
 
 [[package]]
 name = "fugit"

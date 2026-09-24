@@ -5,6 +5,7 @@
 )]
 #![deny(clippy::large_stack_frames)]
 
+use embassy_executor::Spawner;
 use esp_hal::{clock::CpuClock, system::Stack, timer::timg::TimerGroup};
 use esp_rtos::embassy::Executor;
 use static_cell::StaticCell;
@@ -24,7 +25,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
     reason = "it's not unusual to allocate larger buffers etc. in main"
 )]
 #[inline]
-pub async fn app<RF, Fut, T>(render: RF) -> T
+pub async fn app<RF, Fut, T>(render: RF, spawner: Spawner) -> T
 where
     RF: FnOnce(crate::swapchain::SwapChain) -> Fut,
     Fut: Future<Output = T>,
@@ -90,6 +91,15 @@ where
             });
         },
     );
+    let touch_peripherals = crate::touch::Peripherals {
+        i2c: peripherals.I2C0,
+        sda: peripherals.GPIO16.into(),
+        scl: peripherals.GPIO15.into(),
+        int: peripherals.GPIO17.into(),
+        rst: peripherals.GPIO18.into(),
+    };
+    spawner.spawn(crate::touch::touch_task(touch_peripherals).expect("spawn touch_task"));
+
     let swapchain = crate::swapchain::SwapChain::new().await;
     render(swapchain).await
 }
