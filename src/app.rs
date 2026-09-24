@@ -74,6 +74,13 @@ where
         cs: peripherals.GPIO10.into(),
         bl: peripherals.GPIO45.into(),
     };
+    let touch_peripherals = crate::touch::Peripherals {
+        i2c: peripherals.I2C0,
+        sda: peripherals.GPIO16.into(),
+        scl: peripherals.GPIO15.into(),
+        int: peripherals.GPIO17.into(),
+        rst: peripherals.GPIO18.into(),
+    };
     static APP_CORE_STACK: StaticCell<Stack<8192>> = StaticCell::new();
     let app_core_stack = APP_CORE_STACK.init(Stack::new());
     esp_rtos::start_second_core(
@@ -88,17 +95,11 @@ where
                     crate::swapchain::swapchain_task(display_peripherals)
                         .expect("spawn swapchain_task"),
                 );
+                spawner
+                    .spawn(crate::touch::touch_task(touch_peripherals).expect("spawn touch_task"));
             });
         },
     );
-    let touch_peripherals = crate::touch::Peripherals {
-        i2c: peripherals.I2C0,
-        sda: peripherals.GPIO16.into(),
-        scl: peripherals.GPIO15.into(),
-        int: peripherals.GPIO17.into(),
-        rst: peripherals.GPIO18.into(),
-    };
-    spawner.spawn(crate::touch::touch_task(touch_peripherals).expect("spawn touch_task"));
 
     let swapchain = crate::swapchain::SwapChain::new().await;
     render(swapchain).await
