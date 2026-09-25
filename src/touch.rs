@@ -4,7 +4,7 @@ use esp_hal::{
     i2c::master::{Config, I2c},
     peripherals::I2C0,
 };
-use ft6336u_driver::{FT6336U, GestureMode, TouchStatus};
+use ft6336u_driver::{FT6336U, TouchStatus};
 
 pub struct Peripherals {
     pub i2c: I2C0<'static>,
@@ -25,14 +25,14 @@ pub async fn touch_task(peripherals: Peripherals) {
         .unwrap()
         .with_sda(peripherals.sda)
         .with_scl(peripherals.scl);
-    let mut touch = FT6336U::new(i2c);
+    let mut touch = FT6336U::new(i2c.into_async());
     let mut touch_int = Input::new(peripherals.int, InputConfig::default().with_pull(Pull::Up));
     touch_int.listen(Event::FallingEdge);
     loop {
         touch_int.wait_for_falling_edge().await;
 
         loop {
-            match touch.scan() {
+            match touch.scan().await {
                 Ok(data) => {
                     let mut active_touches = 0;
                     for i in 0..data.touch_count as usize {
