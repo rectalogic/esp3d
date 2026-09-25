@@ -4,7 +4,7 @@ use esp_hal::{
     i2c::master::{Config, I2c},
     peripherals::I2C0,
 };
-use ft6336u_driver::{FT6336U, TouchStatus};
+use ft6x36::{Dimension, Ft6x36, Orientation, TouchType};
 
 pub struct Peripherals {
     pub i2c: I2C0<'static>,
@@ -25,34 +25,28 @@ pub async fn touch_task(peripherals: Peripherals) {
         .unwrap()
         .with_sda(peripherals.sda)
         .with_scl(peripherals.scl);
-    let mut touch = FT6336U::new(i2c.into_async());
+    let mut touch = Ft6x36::new(i2c, Dimension(240, 320));
+    touch.set_orientation(Orientation::Landscape);
     let mut touch_int = Input::new(peripherals.int, InputConfig::default().with_pull(Pull::Up));
     touch_int.listen(Event::FallingEdge);
+
     loop {
         touch_int.wait_for_falling_edge().await;
 
         loop {
-            match touch.scan().await {
-                Ok(data) => {
-                    let mut active_touches = 0;
-                    for i in 0..data.touch_count as usize {
-                        let point = &data.points[i];
-                        match point.status {
-                            TouchStatus::Touch => {
-                                log::info!("Touch #{} started at ({}, {})", i, point.x, point.y);
-                                active_touches += 1;
-                            }
-                            TouchStatus::Stream => {
-                                log::info!("Touch #{} at ({}, {})", i, point.x, point.y);
-                                active_touches += 1;
-                            }
-                            TouchStatus::Release => {
-                                log::info!("Touch #{} ended", i);
-                            }
-                        }
+            match touch.get_touch_event() {
+                Ok(event) => {
+                    // If both points are None, the finger has been lifted
+                    if event.p1.is_none() && event.p2.is_none() {
+                        log::info!("Touch ended");
+                        break; // Exit inner loop, wait for next falling edge
                     }
-                    if active_touches == 0 {
-                        break;
+
+                    if let Some(p1) = event.p1 {
+                        log::info!("Touch 1 [{:?}] at ({}, {})", p1.touch_type, p1.x, p1.y);
+                    }
+                    if let Some(p2) = event.p2 {
+                        log::info!("Touch 2 [{:?}] at ({}, {})", p2.touch_type, p2.x, p2.y);
                     }
                 }
                 Err(e) => {

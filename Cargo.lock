@@ -1767,7 +1767,7 @@ dependencies = [
  "esp-hal",
  "esp-println",
  "esp-rtos",
- "ft6336u-driver",
+ "ft6x36",
  "log",
  "sky-ili9341",
  "static_cell",
@@ -1813,12 +1813,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 
 [[package]]
-name = "ft6336u-driver"
-version = "1.1.0"
-source = "git+https://github.com/trevorflahardy/ft6336u-driver.git?rev=6d9eacc#6d9eaccb5c76a5e87330f8d5b332b4640a413383"
+name = "ft6x36"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a5a8dd73b86527b6106e5152dc8b8dde2d61d9dc445485eb70ce494feadf327"
 dependencies = [
  "embedded-hal 1.0.0",
- "embedded-hal-async",
+ "num_enum",
 ]
 
 [[package]]
