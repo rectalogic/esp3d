@@ -36,17 +36,18 @@ pub async fn touch_task(peripherals: Peripherals) {
         loop {
             match touch.get_touch_event() {
                 Ok(event) => {
-                    // If both points are None, the finger has been lifted
-                    if event.p1.is_none() && event.p2.is_none() {
-                        log::info!("Touch ended");
-                        break; // Exit inner loop, wait for next falling edge
-                    }
-
-                    if let Some(p1) = event.p1 {
-                        log::info!("Touch 1 [{:?}] at ({}, {})", p1.touch_type, p1.x, p1.y);
-                    }
-                    if let Some(p2) = event.p2 {
-                        log::info!("Touch 2 [{:?}] at ({}, {})", p2.touch_type, p2.x, p2.y);
+                    match (event.p1, event.p2) {
+                        (None, None) => {
+                            log::info!("Touch ended");
+                            break; // Exit inner loop, wait for next falling edge
+                        }
+                        (Some(p1), None) | (None, Some(p1)) => {
+                            log::info!("Touch 1 [{:?}] at ({}, {})", p1.touch_type, p1.x, p1.y);
+                        }
+                        (Some(p1), Some(p2)) => {
+                            log::info!("Touch 1 [{:?}] at ({}, {})", p1.touch_type, p1.x, p1.y);
+                            log::info!("Touch 2 [{:?}] at ({}, {})", p2.touch_type, p2.x, p2.y);
+                        }
                     }
                 }
                 Err(e) => {
