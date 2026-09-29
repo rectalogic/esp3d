@@ -798,6 +798,7 @@ dependencies = [
  "esp-hal",
  "esp-rtos",
  "esp3d",
+ "log",
  "nalgebra",
 ]
 
@@ -3105,6 +3106,7 @@ dependencies = [
  "esp-hal",
  "esp-rtos",
  "esp3d",
+ "log",
 ]
 
 [[package]]

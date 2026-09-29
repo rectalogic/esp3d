@@ -1,10 +1,20 @@
+use embassy_sync::{
+    blocking_mutex::raw::CriticalSectionRawMutex,
+    channel::{Channel, Receiver, Sender},
+};
 use embassy_time::Timer;
 use esp_hal::{
     gpio::{AnyPin, Event, Input, InputConfig, Level, Output, OutputConfig, Pull},
     i2c::master::{Config, I2c},
     peripherals::I2C0,
 };
-use ft6x36::{Dimension, Ft6x36, Orientation, TouchType};
+use ft6x36::{Dimension, Ft6x36, Orientation, TouchPoint};
+
+pub type TouchEvent = (Option<TouchPoint>, Option<TouchPoint>);
+const TOUCH_CAPACITY: usize = 25;
+pub type TouchChannel = Channel<CriticalSectionRawMutex, TouchEvent, TOUCH_CAPACITY>;
+pub type TouchSender = Sender<'static, CriticalSectionRawMutex, TouchEvent, TOUCH_CAPACITY>;
+pub type TouchReceiver = Receiver<'static, CriticalSectionRawMutex, TouchEvent, TOUCH_CAPACITY>;
 
 pub struct Peripherals {
     pub i2c: I2C0<'static>,
@@ -15,7 +25,7 @@ pub struct Peripherals {
 }
 
 #[embassy_executor::task]
-pub async fn touch_task(peripherals: Peripherals) {
+pub async fn touch_task(peripherals: Peripherals, touch_sender: TouchSender) {
     let mut touch_rst = Output::new(peripherals.rst, Level::Low, OutputConfig::default());
     Timer::after_millis(10).await;
     touch_rst.set_high();
@@ -36,18 +46,9 @@ pub async fn touch_task(peripherals: Peripherals) {
         loop {
             match touch.get_touch_event() {
                 Ok(event) => {
-                    match (event.p1, event.p2) {
-                        (None, None) => {
-                            log::info!("Touch ended");
-                            break; // Exit inner loop, wait for next falling edge
-                        }
-                        (Some(p1), None) | (None, Some(p1)) => {
-                            log::info!("Touch 1 [{:?}] at ({}, {})", p1.touch_type, p1.x, p1.y);
-                        }
-                        (Some(p1), Some(p2)) => {
-                            log::info!("Touch 1 [{:?}] at ({}, {})", p1.touch_type, p1.x, p1.y);
-                            log::info!("Touch 2 [{:?}] at ({}, {})", p2.touch_type, p2.x, p2.y);
-                        }
+                    touch_sender.send((event.p1, event.p2)).await;
+                    if event.p1.is_none() && event.p2.is_none() {
+                        break;
                     }
                 }
                 Err(e) => {

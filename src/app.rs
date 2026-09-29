@@ -25,9 +25,9 @@ esp_bootloader_esp_idf::esp_app_desc!();
     reason = "it's not unusual to allocate larger buffers etc. in main"
 )]
 #[inline]
-pub async fn app<RF, Fut, T>(render: RF, spawner: Spawner) -> T
+pub async fn app<RF, Fut, T>(render: RF, _spawner: Spawner) -> T
 where
-    RF: FnOnce(crate::swapchain::SwapChain) -> Fut,
+    RF: FnOnce(crate::swapchain::SwapChain, crate::touch::TouchReceiver) -> Fut,
     Fut: Future<Output = T>,
 {
     // generator version: 1.3.0
@@ -65,6 +65,10 @@ where
 
     info!("Embassy initialized!");
 
+    static TOUCH_CHANNEL: crate::touch::TouchChannel = crate::touch::TouchChannel::new();
+    let touch_sender = TOUCH_CHANNEL.sender();
+    let touch_receiver = TOUCH_CHANNEL.receiver();
+
     let display_peripherals = crate::swapchain::Peripherals {
         spi2: peripherals.SPI2,
         dma: peripherals.DMA_CH0.into(),
@@ -95,12 +99,14 @@ where
                     crate::swapchain::swapchain_task(display_peripherals)
                         .expect("spawn swapchain_task"),
                 );
-                spawner
-                    .spawn(crate::touch::touch_task(touch_peripherals).expect("spawn touch_task"));
+                spawner.spawn(
+                    crate::touch::touch_task(touch_peripherals, touch_sender)
+                        .expect("spawn touch_task"),
+                );
             });
         },
     );
 
     let swapchain = crate::swapchain::SwapChain::new().await;
-    render(swapchain).await
+    render(swapchain, touch_receiver).await
 }

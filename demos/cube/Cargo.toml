@@ -8,6 +8,7 @@ rust-version.workspace = true
 [dependencies]
 esp-hal.workspace = true
 esp-rtos.workspace = true
+log.workspace = true
 embassy-time.workspace = true
 embassy-executor.workspace = true
 embedded-3dgfx.workspace = true

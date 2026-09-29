@@ -62,7 +62,12 @@ fn render(engine: Res<Engine>, mut command_buffer: ResMut<EngineCommands>, meshe
         .unwrap();
 }
 
-pub async fn run(mut app: App, mut swapchain: esp3d::SwapChain, fps: u8) -> ! {
+pub async fn run(
+    mut app: App,
+    mut swapchain: esp3d::SwapChain,
+    touch_receiver: esp3d::TouchReceiver,
+    fps: u8,
+) -> ! {
     app.finish();
     app.cleanup();
 
@@ -73,6 +78,11 @@ pub async fn run(mut app: App, mut swapchain: esp3d::SwapChain, fps: u8) -> ! {
         // Clear display
         swapchain.back_buffer().clear(Rgb565::BLACK).unwrap();
         zbuffer.fill(Z_MAX_VALUE);
+
+        while let Ok(touch) = touch_receiver.try_receive() {
+            log::info!("{touch:?}");
+            //XXX send into MessageWriter
+        }
 
         app.update();
 
